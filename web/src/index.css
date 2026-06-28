@@ -1,0 +1,15 @@
+@import '@fontsource/inter/400.css';
+
+@import 'tailwindcss';
+
+@theme {
+  --font-inter: "Inter", "Arial", sans-serif;
+}
+
+@layer base {
+  body {
+    background-color: #1C1C1C;
+    color: #EBEBEB;
+    font-family: var(--font-inter);
+  }
+}
