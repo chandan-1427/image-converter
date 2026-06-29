@@ -1,0 +1,7 @@
+packages:
+  - 'web'
+  - 'server/gateway'
+  - 'server/worker'
+allowBuilds:
+  esbuild: true
+  protobufjs: true
