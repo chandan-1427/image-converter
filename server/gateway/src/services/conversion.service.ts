@@ -1,6 +1,6 @@
-import { conversionClient } from './grpcClient.js'
-import { updateImageState } from './jobstore.js'
-import { saveConvertedFile } from './storage.js'
+import { conversionClient } from '../grpc/client.js'
+import { updateImageState } from '../store/jobStore.js'
+import { saveConvertedFile } from './storage.service.js'
 
 interface ConvertImageProgressMessage {
   imageId: string

@@ -1,4 +1,4 @@
-import type { Job, ImageJobState } from './types.js'
+import type { Job, ImageJobState } from '../types/job.types.js'
 
 // In-memory store. Real production setup would use Redis or a database
 // so multiple server instances can share job state.

@@ -3,7 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const STORAGE_DIR = path.join(__dirname, '../temp-storage')
+const STORAGE_DIR = path.join(__dirname, '../../temp-storage')
 
 const FILE_TTL_MS = 5 * 60 * 1000 // 5 minutes
 const CLEANUP_INTERVAL_MS = 60 * 1000 // check every 1 minute

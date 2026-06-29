@@ -7,7 +7,7 @@ import sharp from 'sharp'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PROTO_PATH = path.join(__dirname, '../../protos/image_conversion.proto')
 
-const MAX_MESSAGE_SIZE_BYTES = 15 * 1024 * 1024 // 15MB, matches our agreed cap
+const MAX_MESSAGE_SIZE_BYTES = 20 * 1024 * 1024 // 15MB, matches our agreed cap
 
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
   keepCase: false, // converts snake_case proto fields to camelCase in JS

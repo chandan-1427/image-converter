@@ -4,9 +4,9 @@ import * as grpc from '@grpc/grpc-js'
 import * as protoLoader from '@grpc/proto-loader'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const PROTO_PATH = path.join(__dirname, '../../protos/image_conversion.proto')
+const PROTO_PATH = path.join(__dirname, '../../../protos/image_conversion.proto')
 
-const MAX_MESSAGE_SIZE_BYTES = 15 * 1024 * 1024 // matches the worker's setting
+const MAX_MESSAGE_SIZE_BYTES = 20 * 1024 * 1024 // matches the worker's setting
 
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
   keepCase: false,
