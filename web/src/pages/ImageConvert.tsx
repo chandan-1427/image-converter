@@ -45,6 +45,9 @@ export default function ImageConvert() {
       <ImagePreviewList
         images={state.images}
         onRemove={(id) => dispatch({ type: 'REMOVE_IMAGE', payload: { id } })}
+        onTargetFormatChange={(id, targetFormat) =>
+          dispatch({ type: 'SET_TARGET_FORMAT', payload: {id, targetFormat } })
+        }
       />
     </div>
   )

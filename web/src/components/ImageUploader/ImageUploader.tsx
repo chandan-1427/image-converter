@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react'
 import type { DragEvent, ChangeEvent } from 'react'
 import type { UploadedImage, UploadError } from './ImageUploader.types'
+import { SUPPORTED_FORMATS, getFormatFromMimeType } from '../../constants/imageFormats'
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024 // 10MB
 
@@ -56,11 +57,17 @@ export default function ImageUploader({
         continue
       }
 
+      const currentFormat = getFormatFromMimeType(file.type)
+      const defaultTarget =
+        SUPPORTED_FORMATS.find((format) => format !== currentFormat) ??
+        SUPPORTED_FORMATS[0]
+
       validImages.push({
         id: `${file.name}-${file.size}-${Date.now()}-${Math.random()}`,
         file,
         name: file.name,
         type: file.type,
+        targetFormat: defaultTarget,
       })
     }
 

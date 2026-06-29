@@ -9,18 +9,25 @@ import {
 interface ImagePreviewListProps {
   images: UploadedImage[]
   onRemove: (id: string) => void
+  onTargetFormatChange: (id: string, targetFormat: string) => void
 }
 
 export default function ImagePreviewList({
   images,
   onRemove,
+  onTargetFormatChange,
 }: ImagePreviewListProps) {
   if (images.length === 0) return null
 
   return (
     <div className="mt-4 space-y-2">
       {images.map((image) => (
-        <ImagePreviewRow key={image.id} image={image} onRemove={onRemove} />
+        <ImagePreviewRow 
+          key={image.id} 
+          image={image} 
+          onRemove={onRemove} 
+          onTargetFormatChange={onTargetFormatChange}  
+        />
       ))}
     </div>
   )
@@ -29,9 +36,14 @@ export default function ImagePreviewList({
 interface ImagePreviewRowProps {
   image: UploadedImage
   onRemove: (id: string) => void
+  onTargetFormatChange: (id: string, targetFormat: string) => void
 }
 
-function ImagePreviewRow({ image, onRemove }: ImagePreviewRowProps) {
+function ImagePreviewRow({ 
+  image, 
+  onRemove, 
+  onTargetFormatChange 
+}: ImagePreviewRowProps) {
   const [previewUrl, setPreviewUrl] = useState<string>('')
 
   useEffect(() => {
@@ -64,10 +76,11 @@ function ImagePreviewRow({ image, onRemove }: ImagePreviewRowProps) {
         <p className="text-xs text-gray-500">{image.type}</p>
       </div>
 
-      <select className="border border-gray-600 rounded px-2 py-1 text-sm text-gray-600">
-        <option value="" disabled>
-          Convert to...
-        </option>
+      <select 
+        value={image.targetFormat}
+        onChange={(e) => onTargetFormatChange(image.id, e.target.value)}
+        className="border border-gray-600 rounded px-2 py-1 text-sm text-gray-600"
+      >
         {availableTargets.map((format) => (
           <option key={format} value={format}>
             {FORMAT_LABELS[format]}

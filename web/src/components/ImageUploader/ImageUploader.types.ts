@@ -3,6 +3,7 @@ export interface UploadedImage {
   file: File
   name: string
   type: string
+  targetFormat: string
 }
 
 export interface UploadError {

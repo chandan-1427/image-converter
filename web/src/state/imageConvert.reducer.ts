@@ -15,6 +15,7 @@ export type ImageConvertAction =
   | { type: 'SET_ERRORS'; payload: UploadError[] }
   | { type: 'CLEAR_ERRORS' }
   | { type: 'REMOVE_IMAGE'; payload: { id: string } }
+  | { type: 'SET_TARGET_FORMAT'; payload: { id: string; targetFormat: string } }
 
 export function imageConvertReducer(
   state: ImageConvertState,
@@ -40,6 +41,15 @@ export function imageConvertReducer(
       return {
         ...state,
         images: state.images.filter((img) => img.id !== action.payload.id),
+      }
+    case 'SET_TARGET_FORMAT':
+      return {
+        ...state,
+        images: state.images.map((img) =>
+          img.id === action.payload.id
+            ? { ...img, targetFormat: action.payload.targetFormat }
+            : img
+        ),
       }
     default:
       return state
