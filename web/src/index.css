@@ -12,4 +12,8 @@
     color: #EBEBEB;
     font-family: var(--font-inter);
   }
+
+  .white-color {
+    color: #EBEBEB;
+  }
 }
