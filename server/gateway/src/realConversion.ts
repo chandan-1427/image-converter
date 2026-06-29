@@ -13,14 +13,9 @@ const STAGE_TO_PERCENTAGE: Record<string, number> = {
   RECEIVED: 10,
   CONVERTING: 50,
   DONE: 100,
-  FAILED: 0, // overridden below to whatever percentage it failed at
+  FAILED: 0,
 }
 
-/**
- * Calls the worker over gRPC to convert one image, updates the shared
- * job store as progress arrives, and resolves once the image is
- * fully done or failed.
- */
 export function runRealConversion(
   jobId: string,
   imageId: string,
@@ -31,6 +26,7 @@ export function runRealConversion(
 ): Promise<void> {
   return new Promise((resolve) => {
     let lastKnownPercentage = 0
+    let pendingWork: Promise<void> = Promise.resolve()
 
     const call = conversionClient.ConvertImage({
       imageId,
@@ -39,50 +35,55 @@ export function runRealConversion(
       targetFormat,
     })
 
-    call.on('data', async (message: ConvertImageProgressMessage) => {
-      const { stage, convertedData, errorMessage } = message
+    call.on('data', (message: ConvertImageProgressMessage) => {
+      // Chain each data event's handling onto pendingWork, so 'end'
+      // can wait for the LAST one to actually finish before resolving.
+      pendingWork = pendingWork.then(async () => {
+        const { stage, convertedData, errorMessage } = message
 
-      if (stage === 'DONE' && convertedData) {
-        const downloadUrl = await saveConvertedFile(
-          imageId,
-          targetFormat,
-          convertedData
-        )
+        if (stage === 'DONE' && convertedData) {
+          const downloadUrl = await saveConvertedFile(
+            imageId,
+            targetFormat,
+            convertedData
+          )
+          updateImageState(jobId, imageId, {
+            status: 'done',
+            percentage: 100,
+            downloadUrl,
+          })
+          onUpdate()
+          return
+        }
+
+        if (stage === 'FAILED') {
+          updateImageState(jobId, imageId, {
+            status: 'failed',
+            percentage: lastKnownPercentage,
+            errorMessage: errorMessage ?? 'Conversion failed',
+          })
+          onUpdate()
+          return
+        }
+
+        const percentage = STAGE_TO_PERCENTAGE[stage] ?? lastKnownPercentage
+        lastKnownPercentage = percentage
+
         updateImageState(jobId, imageId, {
-          status: 'done',
-          percentage: 100,
-          downloadUrl,
+          status: 'processing',
+          percentage,
         })
         onUpdate()
-        return
-      }
-
-      if (stage === 'FAILED') {
-        updateImageState(jobId, imageId, {
-          status: 'failed',
-          percentage: lastKnownPercentage,
-          errorMessage: errorMessage ?? 'Conversion failed',
-        })
-        onUpdate()
-        return
-      }
-
-      // RECEIVED or CONVERTING
-      const percentage = STAGE_TO_PERCENTAGE[stage] ?? lastKnownPercentage
-      lastKnownPercentage = percentage
-
-      updateImageState(jobId, imageId, {
-        status: 'processing',
-        percentage,
       })
-      onUpdate()
     })
 
-    call.on('end', () => {
+    call.on('end', async () => {
+      await pendingWork
       resolve()
     })
 
-    call.on('error', (err: Error) => {
+    call.on('error', async (err: Error) => {
+      await pendingWork
       updateImageState(jobId, imageId, {
         status: 'failed',
         percentage: lastKnownPercentage,
