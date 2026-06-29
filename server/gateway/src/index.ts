@@ -2,8 +2,10 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { serve } from '@hono/node-server'
 import { createJob, getJob } from './jobstore.js'
-import { runFakeConversion } from './fetchConversion.js'
+import { runRealConversion } from './realConversion.js'
 import type { ImageJobState } from './types.js'
+import { getStorageDir } from './storage.js'
+import path from 'node:path'
 
 const app = new Hono()
 
@@ -42,14 +44,39 @@ app.post('/api/jobs', async (c) => {
     return c.json({ error: 'No images provided' }, 400)
   }
 
+  const files = formData.getAll('files')
+
+  if (files.length !== metaImages.length) {
+    return c.json(
+      { error: 'Mismatch between number of files and metadata entries' },
+      400
+    )
+  }
+
   const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
 
-  const initialStates: ImageJobState[] = metaImages.map((img) => ({
-    imageId: img.id,
-    targetFormat: img.targetFormat,
-    status: 'queued',
-    percentage: 0,
-  }))
+  const initialStates: ImageJobState[] = []
+
+  for (let i = 0; i < metaImages.length; i++) {
+    const meta = metaImages[i]
+    const file = files[i]
+
+    if (!(file instanceof File)) {
+      return c.json({ error: 'Invalid file entry' }, 400)
+    }
+
+    const arrayBuffer = await file.arrayBuffer()
+    const fileBuffer = Buffer.from(arrayBuffer)
+
+    initialStates.push({
+      imageId: meta.id,
+      targetFormat: meta.targetFormat,
+      status: 'queued',
+      percentage: 0,
+      fileBuffer,
+      sourceMimeType: file.type,
+    })
+  }
 
   createJob(jobId, initialStates)
 
@@ -68,18 +95,27 @@ app.get('/api/jobs/:jobId/progress', (c) => {
     new ReadableStream({
       start(controller) {
         const encoder = new TextEncoder()
+        let isStreamClosed = false
 
         const sendProgress = (imageId: string) => {
+          if (isStreamClosed) return
+
           const state = job.images.get(imageId)
           if (!state) return
 
           const payload = JSON.stringify(state)
-          controller.enqueue(
-            encoder.encode(`event: progress\ndata: ${payload}\n\n`)
-          )
+          try {
+            controller.enqueue(
+              encoder.encode(`event: progress\ndata: ${payload}\n\n`)
+            )
+          } catch (err) {
+            console.error('Failed to send progress event:', err)
+          }
         }
 
         const sendComplete = () => {
+          if (isStreamClosed) return
+
           const allStates = Array.from(job.images.values())
           const succeeded = allStates.filter((s) => s.status === 'done').length
           const failed = allStates.filter((s) => s.status === 'failed').length
@@ -90,9 +126,16 @@ app.get('/api/jobs/:jobId/progress', (c) => {
             succeeded,
             failed,
           })
-          controller.enqueue(
-            encoder.encode(`event: complete\ndata: ${payload}\n\n`)
-          )
+
+          try {
+            controller.enqueue(
+              encoder.encode(`event: complete\ndata: ${payload}\n\n`)
+            )
+          } catch (err) {
+            console.error('Failed to send complete event:', err)
+          }
+
+          isStreamClosed = true
           controller.close()
         }
 
@@ -100,8 +143,13 @@ app.get('/api/jobs/:jobId/progress', (c) => {
         const imageIds = Array.from(job.images.keys())
         const conversionPromises = imageIds.map((imageId) => {
           const state = job.images.get(imageId)!
-          return runFakeConversion(jobId, imageId, state.targetFormat, () =>
-            sendProgress(imageId)
+          return runRealConversion(
+            jobId,
+            imageId,
+            state.fileBuffer!,
+            state.sourceMimeType!,
+            state.targetFormat,
+            () => sendProgress(imageId)
           )
         })
 
@@ -116,6 +164,30 @@ app.get('/api/jobs/:jobId/progress', (c) => {
       },
     }
   )
+})
+
+app.get('/api/files/:fileName', async (c) => {
+  const fileName = c.req.param('fileName')
+
+  // Prevent path traversal — reject anything trying to escape the storage folder
+  if (fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) {
+    return c.json({ error: 'Invalid file name' }, 400)
+  }
+
+  const filePath = path.join(getStorageDir(), fileName)
+
+  try {
+    const file = await import('node:fs/promises').then((fs) =>
+      fs.readFile(filePath)
+    )
+    return new Response(file, {
+      headers: {
+        'Content-Disposition': `attachment; filename="${fileName}"`,
+      },
+    })
+  } catch {
+    return c.json({ error: 'File not found or expired' }, 404)
+  }
 })
 
 const port = 8080

@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package imageconversion;
+
+service ImageConversionService {
+  // Server-streaming RPC: one request, multiple stage updates over time
+  rpc ConvertImage(ConvertImageRequest) returns (stream ConvertImageProgress);
+}
+
+message ConvertImageRequest {
+  string image_id = 1;
+  bytes image_data = 2;
+  string source_mime_type = 3;
+  string target_format = 4; // "jpeg" | "png" | "webp" | "gif"
+}
+
+enum ConversionStage {
+  RECEIVED = 0;
+  CONVERTING = 1;
+  DONE = 2;
+  FAILED = 3;
+}
+
+message ConvertImageProgress {
+  string image_id = 1;
+  ConversionStage stage = 2;
+  bytes converted_data = 3;   // present only when stage == DONE
+  string error_message = 4;   // present only when stage == FAILED
+}

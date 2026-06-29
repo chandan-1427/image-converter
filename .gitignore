@@ -36,3 +36,6 @@ Thumbs.db
 *.sw?
 
 *.local
+
+server/gateway/temp-storage/*
+!server/gateway/temp-storage/.gitkeep

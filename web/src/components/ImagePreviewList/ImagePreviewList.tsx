@@ -70,11 +70,15 @@ function ImagePreviewRow({
 
   return (
     <div className="flex items-center gap-4 border border-white/20 rounded-lg p-3">
-      <img
-        src={previewUrl}
-        alt={image.name}
-        className="w-14 h-14 object-cover rounded"
-      />
+      {previewUrl ? (
+        <img
+          src={previewUrl}
+          alt={image.name}
+          className="w-14 h-14 object-cover rounded"
+        />
+      ) : (
+        <div className="w-14 h-14 rounded bg-gray-200" />
+      )}
 
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-white-color truncate">

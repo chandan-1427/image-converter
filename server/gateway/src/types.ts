@@ -7,6 +7,9 @@ export interface ImageJobState {
   percentage: number
   downloadUrl?: string
   errorMessage?: string
+  // Raw file data, kept only until conversion starts
+  fileBuffer?: Buffer
+  sourceMimeType?: string
 }
 
 export interface Job {
